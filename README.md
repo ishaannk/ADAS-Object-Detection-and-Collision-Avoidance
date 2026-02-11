@@ -40,18 +40,8 @@ pip install tensorflow-datasets torch ultralytics opencv-python matplotlib numpy
 
 - The project runs detection on multiple test cases, demonstrating object detection and collision avoidance in real-world scenarios.
 
-## Running the Project
 
-### Instructions to Clone this Repository
-1. Open a terminal or command prompt.
-2. Run the following command to clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/ADAS-Object-Detection.git
-   ```
-3. Navigate into the project directory:
-   ```bash
-   cd ADAS-Object-Detection
-   ```
+
 
 <img width="1420" height="488" alt="image" src="https://github.com/user-attachments/assets/0b0715f0-d339-4a51-8f3f-d23236a50a96" />
 
