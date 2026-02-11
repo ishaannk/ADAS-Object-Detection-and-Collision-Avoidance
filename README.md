@@ -53,21 +53,11 @@ pip install tensorflow-datasets torch ultralytics opencv-python matplotlib numpy
    cd ADAS-Object-Detection
    ```
 
-### Steps to Run the Project
+<img width="1420" height="488" alt="image" src="https://github.com/user-attachments/assets/0b0715f0-d339-4a51-8f3f-d23236a50a96" />
 
-1. Clone the repository and navigate to the folder:
-   ```bash
-   git clone https://github.com/your-repo/ADAS-Object-Detection.git
-   cd ADAS-Object-Detection
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run the Jupyter Notebook to process images and visualize detection:
-   ```bash
-   jupyter notebook ADAS_Exercise.ipynb
-   ```
+<img width="1449" height="508" alt="image" src="https://github.com/user-attachments/assets/ee6279e9-0bed-4db8-ab00-8ecd23898b17" />
+<img width="1603" height="429" alt="image" src="https://github.com/user-attachments/assets/698e7ac5-f2cd-4ec3-b3da-db558befa228" />
+
 
 ## Future Scope
 
