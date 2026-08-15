@@ -1,57 +1,172 @@
-# ADAS-Object-Detection-and-Collision-Avoidance
+# ADAS Object Detection & Collision Avoidance
 
+Calibrated camera-LIDAR fusion, KITTI-fine-tuned detection, and a
+time-to-collision risk engine — built as a perception module in the same
+category as Forward Collision Warning / early-AEB systems and fleet
+safety-analytics pipelines.
 
-This project focuses on **Advanced Driver Assistance Systems (ADAS)** using **YOLOv5** for object detection and collision avoidance. It processes images from the **KITTI dataset**, applies real-time object detection, and integrates sensor fusion for improved safety.
+**Model on Hugging Face Hub:** [mokshhere/adas-kitti-yolo11m](https://huggingface.co/mokshhere/adas-kitti-yolo11m)
 
-## Use Cases
+This started as a Colab prototype and has been rebuilt end-to-end: real
+sensor calibration instead of a shortcut, a detector fine-tuned on KITTI's
+own label taxonomy instead of raw COCO classes, and a risk engine driven by
+tracked closing speed instead of a static per-frame distance threshold.
 
-- **Object Detection**: Identifies vehicles, pedestrians, and obstacles using YOLOv5.
-- **Collision Avoidance**: Computes safe distances and potential collision risks.
-- **Sensor Fusion**: Merges data from camera and LIDAR for enhanced accuracy.
-- **Autonomous Driving Research**: Aids in developing intelligent navigation systems.
+## Before / after
 
-## Explanations
+The original prototype used a generic COCO-pretrained detector. Fine-tuning
+on KITTI didn't just raise a metric — it changed *what the model considers
+a real object*. KITTI's own ground truth for this frame contains exactly
+one labeled object (a pedestrian, no bicycles). The COCO-pretrained model,
+detecting a generic "bicycle" class, boxes every parked bike in the rack.
+The fine-tuned model learned KITTI's actual annotation semantics and
+correctly ignores them:
 
-### 1. Environment Setup
+| Before — COCO-pretrained | After — fine-tuned on KITTI |
+|---|---|
+| ![before](docs/images/fusion_before_coco_pretrained.png) | ![after](docs/images/fusion_after_kitti_finetuned.png) |
 
-The following dependencies are installed:
+Both images show the corrected fusion pipeline (real calibration, frustum-
+constrained LIDAR association) — the difference is only the detector's
+training data.
 
-```bash
-pip install tensorflow-datasets torch ultralytics opencv-python matplotlib numpy
+## Industry use cases
+
+This is one perception core wrapped two different ways, because those are
+the two shapes this kind of system actually ships in:
+
+- **In-vehicle perception module (edge, real-time).** Forward Collision
+  Warning / early-AEB decision support — the same category of function as
+  aftermarket ADAS dashcams (Mobileye-style) and OEM/Tier-1 L2 stacks. This
+  shape needs a hard latency budget and an embedded-friendly export path,
+  which is why the detector is also benchmarked as ONNX.
+- **Fleet safety analytics (cloud, batch).** The same pipeline as an
+  offline service — ingest dashcam or fleet footage, emit near-miss and
+  risk events. This is what telematics and insurance fleet-safety vendors
+  run for driver scoring and usage-based insurance.
+- **OEM/Tier-1 offline validation.** Testing detection and fusion
+  algorithms against a public benchmark (KITTI) before they ever touch
+  embedded ECU hardware — standard practice before deploying anything to
+  a vehicle.
+
+## Architecture
+
+```
+Camera frame            LIDAR sweep (.bin velodyne)
+     │                         │
+     ▼                         ▼
+Detector (fine-tuned)   Calibrated projection
+  2D boxes               (P2 · R0_rect · Tr_velo_to_cam)
+     │                         │
+     └───────────┬─────────────┘
+                  ▼
+      Frustum fusion (points inside box, median depth)
+                  │
+                  ▼
+      Multi-object tracker (persistent IDs, relative velocity)
+                  │
+                  ▼
+      Risk engine (time-to-collision)
+                  │
+                  ▼
+            Alert / report
 ```
 
-### 2. Dataset and Model
+## What was actually fixed
 
-- **Dataset**: KITTI dataset (used for training/testing)
-- **Model**: YOLOv5 (pre-trained on COCO for object detection)
+The original prototype (`notebooks/adas_prototype_original.py`) used KITTI's
+ground-truth 3D box location as if it were a raw LIDAR point cloud, applied
+no camera calibration, and matched distance by nearest point *anywhere in
+the frame* rather than inside the detected box — so a pedestrian could
+silently inherit a truck's distance. Full list of what was wrong and how
+each was fixed is in [`docs/PLAN.md`](docs/PLAN.md).
 
-### 3. Data Preprocessing & Visualization
+## Results
 
-- Load and visualize raw images from the dataset.
-- Extract relevant information from LIDAR sensor data.
+**Detector**: YOLO11m fine-tuned on KITTI's own taxonomy (Car, Van, Truck,
+Pedestrian, Person_sitting, Cyclist, Tram, Misc), 100 epochs on 2× GPU.
 
-### 4. Object Detection & Collision Avoidance
+| | mAP50 | mAP50-95 |
+|---|---|---|
+| Ultralytics validation, all classes | 0.946 | 0.781 |
 
-- Use **YOLOv5** to detect objects in real-time.
-- Apply bounding boxes and confidence scores to detect pedestrians, vehicles, and other objects.
-- Compute distances and potential collision risks.
+KITTI-protocol-style eval (easy/moderate/hard difficulty tiers, per-class
+IoU thresholds — see `src/adas/eval/kitti_eval.py`):
 
-### 5. Multiple Example Scenarios
+| | Easy | Moderate | Hard |
+|---|---|---|---|
+| Mean AP | 0.955 | 0.934 | 0.928 |
 
-- The project runs detection on multiple test cases, demonstrating object detection and collision avoidance in real-world scenarios.
+**Latency** (imgsz=960):
 
+| Backend | Latency | FPS |
+|---|---|---|
+| PyTorch, GPU | 23.3 ms | 42.9 |
+| ONNX Runtime, CPU | 22.3 ms | 44.8 |
 
+ONNX on CPU alone matches GPU throughput — a good sign for deployment
+without dedicated accelerator hardware. Full numbers, per-class breakdowns,
+and the training log are in [`docs/PLAN.md`](docs/PLAN.md).
 
+## Quickstart
 
-<img width="1420" height="488" alt="image" src="https://github.com/user-attachments/assets/0b0715f0-d339-4a51-8f3f-d23236a50a96" />
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e .
 
-<img width="1449" height="508" alt="image" src="https://github.com/user-attachments/assets/ee6279e9-0bed-4db8-ab00-8ecd23898b17" />
-<img width="1603" height="429" alt="image" src="https://github.com/user-attachments/assets/698e7ac5-f2cd-4ec3-b3da-db558befa228" />
+# Download KITTI Object Detection Benchmark (training split only, ~20GB)
+bash scripts/download_kitti.sh
 
+# KITTI labels -> YOLO format, deterministic 85/15 train/val split
+python scripts/prepare_dataset.py
 
-## Future Scope
+# Fine-tune (both GPUs if available)
+python scripts/train.py --device 0,1
 
-- Improve accuracy with fine-tuned YOLO models.
-- Integrate real-time streaming for live ADAS applications.
-- Deploy on edge devices for low-latency performance.
+# KITTI-protocol eval + latency + ONNX export
+python scripts/evaluate.py --weights runs/detect/kitti_finetune/weights/best.pt
+python scripts/benchmark_latency.py --weights runs/detect/kitti_finetune/weights/best.pt
+python scripts/export_onnx.py --weights runs/detect/kitti_finetune/weights/best.pt
 
+# Visualize the corrected fusion pipeline on a few frames
+python scripts/run_fusion_demo.py --weights runs/detect/kitti_finetune/weights/best.pt
+
+python -m pytest tests/
+```
+
+## Repo structure
+
+```
+src/adas/
+  data/        KITTI reader, calibration parsing, YOLO conversion
+  detection/   pinned ultralytics detector wrapper
+  fusion/      calibrated LIDAR projection + frustum association
+  tracking/    multi-object tracker (reuses ultralytics ByteTrack/BoT-SORT)
+  risk/        time-to-collision risk engine
+  eval/        KITTI-protocol-style evaluation
+scripts/       CLI entry points for every step above
+configs/       dataset.yaml
+tests/         unit tests, no real KITTI data required
+notebooks/     original Colab prototype, kept for provenance
+docs/PLAN.md   full rebuild plan, diagnostics, and results
+```
+
+## Known limitations
+
+- **KITTI's license** restricts this dataset to non-commercial research use.
+  The methodology and pipeline here transfer to a real product; these
+  specific KITTI-trained weights are not licensed for commercial deployment
+  as-is.
+- **Ultralytics YOLO11 is AGPL-3.0.** Fine for research/portfolio use; a
+  commercial deployment needs an Ultralytics Enterprise license or a
+  permissively-licensed alternative detector.
+- **Time-to-collision is unit-tested on synthetic sequences, not validated
+  on real KITTI multi-frame data.** The KITTI Tracking Benchmark (sequences
+  + ego-motion) was deliberately skipped for disk space — see
+  [`docs/PLAN.md`](docs/PLAN.md).
+
+## Credits
+
+Dataset: [KITTI](https://www.cvlibs.net/datasets/kitti/) (Geiger et al.).
+Detector: [Ultralytics YOLO11](https://github.com/ultralytics/ultralytics).
+Original prototype: `notebooks/adas_prototype_original.py`.

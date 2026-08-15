@@ -1,0 +1,17 @@
+.venv/
+.cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+/data/
+/runs/
+/logs/
+*.pt
+*.onnx
+*.engine
+
+.pytest_cache/
+.mypy_cache/
