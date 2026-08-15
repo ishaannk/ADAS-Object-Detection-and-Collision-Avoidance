@@ -6,6 +6,7 @@ category as Forward Collision Warning / early-AEB systems and fleet
 safety-analytics pipelines.
 
 **Model on Hugging Face Hub:** [mokshhere/adas-kitti-yolo11m](https://huggingface.co/mokshhere/adas-kitti-yolo11m)
+**Docker service:** `docker build . && docker run -p 8000:8000 <image>` — a FastAPI inference endpoint, see [Deployment](#deployment) below.
 
 This started as a Colab prototype and has been rebuilt end-to-end: real
 sensor calibration instead of a shortcut, a detector fine-tuned on KITTI's
@@ -149,7 +150,39 @@ configs/       dataset.yaml
 tests/         unit tests, no real KITTI data required
 notebooks/     original Colab prototype, kept for provenance
 docs/PLAN.md   full rebuild plan, diagnostics, and results
+Dockerfile     FastAPI inference service (see Deployment below)
+space/         Hugging Face Space demo (Gradio) — built and tested, not yet deployed
 ```
+
+## Deployment
+
+Two independently versioned pieces, on purpose — see `docs/PLAN.md` for why:
+the model lives on Hugging Face Hub, the runtime is a Docker image that
+fetches it at startup.
+
+```bash
+docker build -t adas-perception .
+docker run -p 8000:8000 adas-perception
+
+curl http://localhost:8000/health
+
+curl -X POST http://localhost:8000/analyze -F "image=@frame.png"
+
+# Full calibrated fusion — image + matching KITTI calib + velodyne
+curl -X POST http://localhost:8000/analyze \
+  -F "image=@frame.png" -F "calib=@calib.txt" -F "velodyne=@frame.bin"
+```
+
+The image is CPU-only and ONNX-backed on purpose: ONNX Runtime on CPU alone
+benchmarked at 44.8 FPS, matching GPU PyTorch throughput (see Results above),
+so no CUDA base image is needed for real-time performance.
+
+**HF Space demo**: `space/` has a Gradio demo (upload-and-detect, plus a
+"real KITTI frame" tab running the full fusion pipeline on bundled sample
+data) — built and validated locally end-to-end, but not yet deployed, since
+Hugging Face requires a PRO subscription to host Docker/Gradio Spaces even
+on free `cpu-basic` hardware. `python scripts/publish_space.py --repo-id
+<your-username>/<space-name>` publishes it once that's sorted out.
 
 ## Known limitations
 

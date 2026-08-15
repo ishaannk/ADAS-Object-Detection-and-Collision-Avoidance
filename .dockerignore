@@ -1,0 +1,17 @@
+.venv/
+.cache/
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
+
+data/
+runs/
+logs/
+*.pt
+*.onnx
+*.engine
+
+docs/images/
+notebooks/
+tests/

@@ -116,7 +116,13 @@ edge/embedded deployment without dedicated accelerator hardware.
 ## Roadmap status
 
 - [x] P1 — repo foundation, KITTI data pipeline, calibration parsing
-- [x] P2 — YOLO11m fine-tuned, 100 epochs, results above; HF Hub publish pending user go-ahead (needs their HF username/token)
+- [x] P2 — YOLO11m fine-tuned, 100 epochs, results above; published to Hugging Face Hub as `mokshhere/adas-kitti-yolo11m` (both `.pt` and `.onnx`)
 - [x] P3 — fusion correctness fix (calibrated projection + frustum association), unit-tested, visually validated on real KITTI frames
 - [x] P4 — TTC risk engine + tracker wrapper implemented and unit-tested; real multi-frame validation deferred (no Tracking Benchmark data — open item)
 - [x] P5 — KITTI-protocol eval, latency/FPS benchmarking, ONNX export — results above
+- [~] P6 — Docker service (FastAPI, CPU/ONNX, fetches the model from HF Hub at
+  startup) built and validated end-to-end against the real published model.
+  HF Space demo (`space/`) built and validated locally, but not deployed —
+  Hugging Face requires a PRO subscription to host Docker/Gradio Spaces even
+  on free `cpu-basic` hardware; publishing it is a one-command follow-up
+  (`scripts/publish_space.py`) once that's sorted out.
