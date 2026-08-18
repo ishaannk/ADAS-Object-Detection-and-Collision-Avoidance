@@ -2,7 +2,7 @@
 
 
 This project focuses on **Advanced Driver Assistance Systems (ADAS)** using **YOLOv5** for object detection and collision avoidance. It processes images from the **KITTI dataset**, applies real-time object detection, and integrates sensor fusion for improved safety.
-Improved Version : https://github.com/ishaannk/adas-rebuild
+**Improved Version** : https://github.com/ishaannk/adas-rebuild
 ## Use Cases
 
 - **Object Detection**: Identifies vehicles, pedestrians, and obstacles using YOLOv5.
